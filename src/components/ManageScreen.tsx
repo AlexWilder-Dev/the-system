@@ -13,8 +13,18 @@ type Editing = { mode: 'new' } | { mode: 'edit'; quest: Quest } | null;
 const WAKE_TIMES = ['05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'];
 
 export function ManageScreen({ openFormSignal, onBack }: { openFormSignal: number; onBack: () => void }) {
-  const { state, today, addQuest, updateQuest, setQuestActive, setWakeWindow, importState, requestReassess, resetAll } =
-    useGame();
+  const {
+    state,
+    today,
+    addQuest,
+    updateQuest,
+    setQuestActive,
+    setWakeWindow,
+    importState,
+    requestReassess,
+    resetAll,
+    devLevelUp,
+  } = useGame();
   const s = state!;
   const active = s.quests.filter((q) => q.active);
   const archived = s.quests.filter((q) => !q.active);
@@ -183,6 +193,17 @@ export function ManageScreen({ openFormSignal, onBack }: { openFormSignal: numbe
         </div>
         {importError && <p className="manage-note">{importError}</p>}
         <p className="manage-note">BACKUP IS MANUAL. EXPORT REGULARLY.</p>
+      </section>
+
+      {/* TEMPORARY — graphics testing hook, remove before "release". */}
+      <section className="manage-section">
+        <span className="dim-label">DEV TEST</span>
+        <div className="data-actions" style={{ marginTop: 8 }}>
+          <button className="sys-btn" onClick={devLevelUp}>
+            DEV TEST — LEVEL UP
+          </button>
+        </div>
+        <p className="manage-note">GRANTS EXACTLY THE XP TO REACH THE NEXT LEVEL. FIRES THE FULL CEREMONY.</p>
       </section>
 
       <section className="manage-section">

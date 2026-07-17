@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'icon-512-maskable.png', 'apple-touch-icon.png'],
       workbox: {
         // Precache fonts too so the app is fully usable offline after first load.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -26,7 +26,7 @@ export default defineConfig({
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

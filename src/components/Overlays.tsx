@@ -1,10 +1,53 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect } from 'react';
 import type { StatKey } from '../types';
 import { useGame, type Overlay } from '../state/GameContext';
 import { STAT_KEYS } from '../logic/stats';
 import type { Letter } from '../logic/rank';
 import { dramatic, fade, settle, sweep, useAnim } from '../motion/springs';
+import { haptic, HAPTIC } from '../motion/haptics';
+
+/**
+ * Overlay titles materialise character by character with a brief chromatic
+ * split — the System glitching into the world. Falls back to a plain title
+ * under reduced motion.
+ */
+function GlitchTitle({ text }: { text: string }) {
+  const reduced = useReducedMotion();
+  if (reduced) return <h2 className="overlay-title">{text}</h2>;
+  return (
+    <motion.h2
+      className="overlay-title chroma"
+      aria-label={text}
+      initial="hidden"
+      animate="show"
+      variants={{ show: { transition: { staggerChildren: 0.045, delayChildren: 0.1 } } }}
+    >
+      {text.split('').map((ch, i) => (
+        <motion.span
+          key={i}
+          aria-hidden="true"
+          style={{ display: 'inline-block', whiteSpace: 'pre' }}
+          variants={{
+            hidden: { opacity: 0, y: 8, filter: 'blur(5px)' },
+            show: { opacity: 1, y: 0, filter: 'blur(0px)' },
+          }}
+          transition={{ duration: 0.16 }}
+        >
+          {ch}
+        </motion.span>
+      ))}
+    </motion.h2>
+  );
+}
+
+const HAPTIC_BY_KIND: Record<Overlay['kind'], number | readonly number[]> = {
+  levelup: HAPTIC.levelup,
+  subrank: HAPTIC.subrank,
+  rankup: HAPTIC.rankup,
+  gatefail: HAPTIC.gatefail,
+  stamp: HAPTIC.stamp,
+};
 
 /** Renders the front of the overlay queue: level-up, sub-rank, rank-up (gate pass), gate-fail, daily stamp. */
 export function OverlayHost() {
@@ -24,6 +67,10 @@ function overlayKey(o: Overlay): string {
 }
 
 function OverlayView({ overlay, onDismiss }: { overlay: Overlay; onDismiss: () => void }) {
+  useEffect(() => {
+    haptic(HAPTIC_BY_KIND[overlay.kind]);
+  }, [overlay.kind]);
+
   switch (overlay.kind) {
     case 'levelup':
       return <LevelUp level={overlay.level} deltas={overlay.deltas} onDismiss={onDismiss} />;
@@ -67,8 +114,8 @@ function LevelUp({
         transition={tDramatic}
       >
         <div className="overlay-eyebrow">SYSTEM</div>
-        <h2 className="overlay-title">LEVEL UP</h2>
-        <div className="overlay-level num">LV {level}</div>
+        <GlitchTitle text="LEVEL UP" />
+        <div className="overlay-level num chroma">LV {level}</div>
         {rows.length > 0 && (
           <div className="delta-list">
             {rows.map((k) => (
@@ -107,8 +154,8 @@ function SubRankUp({ label, mastered, onDismiss }: { label: string; mastered: bo
         transition={tDramatic}
       >
         <div className="overlay-eyebrow">SYSTEM</div>
-        <h2 className="overlay-title">SUB-RANK ATTAINED</h2>
-        <div className="overlay-level num">{label}</div>
+        <GlitchTitle text="SUB-RANK ATTAINED" />
+        <div className="overlay-level num chroma">{label}</div>
         <p className="overlay-copy">
           {mastered
             ? 'TIER MASTERED. YOU ARE THE BEST VERSION OF THIS RANK — ONLY THE GATE MOVES YOU NOW.'
@@ -144,7 +191,7 @@ function RankUp({ letter, gateName, onDismiss }: { letter: Letter; gateName: str
           {gateName} — CLEARED
         </motion.div>
         <motion.div
-          className="rankup-letter num"
+          className="rankup-letter num chroma"
           initial={{ scale: 3.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={tDramatic}
@@ -218,7 +265,7 @@ function Stamp({ onDismiss }: { onDismiss: () => void }) {
       onClick={onDismiss}
     >
       <motion.div
-        className="stamp"
+        className="stamp chroma"
         initial={{ scale: 2.2, opacity: 0, rotate: 0 }}
         animate={{ scale: 1, opacity: 1, rotate: -5 }}
         transition={tDramatic}

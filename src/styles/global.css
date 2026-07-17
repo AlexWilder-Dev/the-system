@@ -97,6 +97,28 @@ button {
   );
 }
 
+/* Deep-space colour wash drifting behind the particle field. */
+.nebula {
+  position: fixed;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 45% at 22% 28%, rgba(26, 95, 180, 0.13), transparent 70%),
+    radial-gradient(45% 40% at 78% 68%, rgba(77, 184, 255, 0.075), transparent 70%),
+    radial-gradient(30% 30% at 60% 18%, rgba(232, 194, 100, 0.025), transparent 70%);
+  animation: nebula-drift 70s ease-in-out infinite alternate;
+}
+
+@keyframes nebula-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.07);
+  }
+}
+
 /* ============================================================
    Shell + screens
    ============================================================ */
@@ -148,10 +170,11 @@ button {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  box-shadow: var(--glow);
+  box-shadow: var(--glow), inset 0 0 26px rgba(77, 184, 255, 0.05);
 }
 
-/* Corner accents: short 8px strokes at each corner at full opacity. */
+/* Corner accents (8px strokes) + diagonal cut-lines at TL/BR — the
+   holographic window read without clip-path (which would eat the glow). */
 .sys-panel::before {
   content: '';
   position: absolute;
@@ -164,12 +187,25 @@ button {
     linear-gradient(var(--system), var(--system)),
     linear-gradient(var(--system), var(--system)),
     linear-gradient(var(--system), var(--system)),
-    linear-gradient(var(--system), var(--system));
-  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+    linear-gradient(var(--system), var(--system)),
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--border) calc(50% - 1px), var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--border) calc(50% - 1px), var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%, 0 0, 100% 100%;
   background-size: 8px 1.5px, 1.5px 8px, 8px 1.5px, 1.5px 8px, 8px 1.5px, 1.5px 8px, 8px 1.5px,
-    1.5px 8px;
+    1.5px 8px, 14px 14px, 14px 14px;
   background-repeat: no-repeat;
   animation: corner-draw 0.15s ease-out;
+}
+
+/* Scanlines + a faint top sheen: the panel reads as a projected window. */
+.sys-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(220, 232, 245, 0.045), transparent 16%),
+    repeating-linear-gradient(0deg, rgba(220, 232, 245, 0.024) 0 1px, transparent 1px 3px);
 }
 
 @keyframes corner-draw {
@@ -489,10 +525,33 @@ button {
 }
 
 .xpbar-track {
+  position: relative;
   height: 6px;
   background: rgba(77, 184, 255, 0.08);
   border: 1px solid var(--border-dim);
   overflow: hidden;
+}
+
+/* One-shot shimmer fired whenever XP lands. */
+.xpbar-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(220, 240, 255, 0.8), transparent);
+  animation: xp-sweep 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes xp-sweep {
+  from {
+    left: -34%;
+    opacity: 1;
+  }
+  to {
+    left: 100%;
+    opacity: 0.15;
+  }
 }
 
 .xpbar-fill {
@@ -1118,8 +1177,67 @@ button {
   -webkit-text-stroke: 1px var(--system);
 }
 
-/* The Gate: a vertical rift of system light behind the rank letter. */
+/* The aura: a slow-turning conic glow behind the letter. Its intensity
+   tracks the sub-rank — dim at III, burning at I — and mastery gilds it. */
+.rank-aura {
+  position: absolute;
+  width: min(52vh, 92vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(77, 184, 255, 0.3) 40deg,
+    transparent 95deg,
+    transparent 150deg,
+    rgba(26, 95, 180, 0.24) 205deg,
+    transparent 255deg,
+    transparent 300deg,
+    rgba(77, 184, 255, 0.2) 330deg,
+    transparent 360deg
+  );
+  filter: blur(34px);
+  animation: aura-spin 16s linear infinite;
+  pointer-events: none;
+}
+
+.rank-aura--iii {
+  opacity: 0.3;
+}
+
+.rank-aura--ii {
+  opacity: 0.55;
+}
+
+.rank-aura--i {
+  opacity: 0.85;
+}
+
+.rank-aura--mastered {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(232, 194, 100, 0.3) 40deg,
+    transparent 95deg,
+    transparent 150deg,
+    rgba(232, 194, 100, 0.18) 205deg,
+    transparent 255deg,
+    transparent 300deg,
+    rgba(77, 184, 255, 0.2) 330deg,
+    transparent 360deg
+  );
+}
+
+@keyframes aura-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The Gate: a vertical rift of system light behind the rank letter,
+   warped by the SVG turbulence filter the Status screen mounts. */
 .gate-rift {
+  filter: url('#rift-distort');
   position: absolute;
   top: 4%;
   bottom: 4%;
@@ -1532,6 +1650,23 @@ button {
   box-shadow: 0 0 16px rgba(255, 107, 107, 0.25);
 }
 
+/* Chromatic split: the System glitching into focus. One-shot on overlays. */
+.chroma {
+  animation: chroma 0.45s steps(4, end) both;
+}
+
+@keyframes chroma {
+  0% {
+    text-shadow: -3px 0 rgba(255, 64, 96, 0.85), 3px 0 rgba(77, 184, 255, 0.85);
+  }
+  45% {
+    text-shadow: 2px 0 rgba(255, 64, 96, 0.5), -2px 0 rgba(77, 184, 255, 0.5);
+  }
+  100% {
+    text-shadow: 0 0 14px rgba(77, 184, 255, 0.45);
+  }
+}
+
 /* ============================================================
    Motion hygiene
    ============================================================ */
@@ -1539,7 +1674,15 @@ button {
   .rank-letter,
   .sigil,
   .gate-rift,
-  .sys-panel::before {
+  .sys-panel::before,
+  .rank-aura,
+  .nebula,
+  .chroma,
+  .xpbar-sweep {
     animation: none;
+  }
+
+  .gate-rift {
+    filter: none;
   }
 }

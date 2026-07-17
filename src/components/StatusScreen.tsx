@@ -81,6 +81,28 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
 
       {/* Signature element. In ?debug mode a tap grants 100 XP for testing. */}
       <div className="rank-wrap" onClick={debug ? grantDebugXp : undefined}>
+        {/* Aura intensity tracks the sub-rank; mastery turns it gold. */}
+        <div
+          className={`rank-aura rank-aura--${rank.sub.toLowerCase()}${rank.mastered ? ' rank-aura--mastered' : ''}`}
+          aria-hidden="true"
+        />
+        {available && (
+          <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
+            <defs>
+              <filter id="rift-distort" x="-500%" y="-5%" width="1100%" height="110%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.02 0.03" numOctaves="2" seed="7" result="noise">
+                  <animate
+                    attributeName="baseFrequency"
+                    dur="7s"
+                    values="0.02 0.03;0.05 0.06;0.02 0.03"
+                    repeatCount="indefinite"
+                  />
+                </feTurbulence>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
+          </svg>
+        )}
         {available && <div className="gate-rift" aria-hidden="true" />}
         <div className="rank-letter num" aria-label={`Rank ${rank.letter}-${rank.sub}`}>
           {rank.letter}

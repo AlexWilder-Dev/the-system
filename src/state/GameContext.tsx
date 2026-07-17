@@ -12,7 +12,8 @@ import type { AppState, GateAttemptRecord, Profile, Quest, Result, ResultStatus,
 import { emptyGateProgress } from '../types';
 import { ROUTINE_BONUS_ID, ROUTINE_BONUS_XP, ROUTINE_STEPS } from '../data/protocols';
 import { addDays, localDateOfISO, localDateStr } from '../logic/dates';
-import { levelForXp } from '../logic/xp';
+import { levelForXp, xpRequiredForLevel } from '../logic/xp';
+import { haptic, HAPTIC } from '../motion/haptics';
 import { performanceCredit, xpForResult } from '../logic/credit';
 import { LETTERS, subProgress, type Letter } from '../logic/rank';
 import { computeStreak, type StreakResult } from '../logic/streak';
@@ -231,6 +232,8 @@ interface GameApi {
   resetAll: () => void;
   importState: (s: AppState) => void;
   grantDebugXp: () => void;
+  /** DEV TEST: grants exactly the XP to reach the next level — for graphics testing. */
+  devLevelUp: () => void;
   debugAdvanceDay: () => void;
   debugFillToday: (status: ResultStatus) => void;
   overlay: Overlay | null;
@@ -380,6 +383,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
       dispatch({ type: 'LOG_RESULT', result, advance, bestRunKm });
+      haptic(HAPTIC.tap);
 
       // Completing the last morning protocol can complete the full routine.
       const bonus = routineBonusIfDue([...state.results, result], routineTicksToday);
@@ -471,6 +475,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DEBUG_XP', amount: 100 });
   }, [state, progressEvents, pushOverlays]);
 
+  const devLevelUp = useCallback(() => {
+    if (!state) return;
+    const amount = xpRequiredForLevel(levelForXp(state.xp) + 1) - state.xp;
+    pushOverlays(progressEvents(state, amount, state.results));
+    dispatch({ type: 'DEBUG_XP', amount });
+  }, [state, progressEvents, pushOverlays]);
+
   const debugAdvanceDay = useCallback(() => {
     setDayOffset((n) => {
       saveDebugOffset(n + 1);
@@ -551,6 +562,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'IMPORT', state: s });
     },
     grantDebugXp,
+    devLevelUp,
     debugAdvanceDay,
     debugFillToday,
     overlay: queue[0] ?? null,

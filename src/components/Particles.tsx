@@ -10,10 +10,13 @@ interface P {
   sway: number;
   phase: number;
   alpha: number;
+  /** 0.35 (far) … 1 (near) — scales speed, sway and brightness for parallax depth. */
+  depth: number;
 }
 
 /**
- * Fixed full-screen atmosphere: ~40 slow-drifting motes in system blue.
+ * Fixed full-screen atmosphere: ~40 slow-drifting motes in system blue,
+ * spread across parallax depths — far motes drift slower, smaller, dimmer.
  * Glow comes from a pre-rendered radial-gradient sprite (one drawImage per
  * particle, no per-frame shadowBlur) so this holds 60fps on mid-range phones.
  * Respects prefers-reduced-motion by rendering a single static frame.
@@ -44,15 +47,20 @@ export function Particles() {
     sctx.fillStyle = grad;
     sctx.fillRect(0, 0, 64, 64);
 
-    const spawn = (): P => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      size: 5 + Math.random() * 16,
-      vy: 0.06 + Math.random() * 0.18,
-      sway: 4 + Math.random() * 10,
-      phase: Math.random() * Math.PI * 2,
-      alpha: 0.05 + Math.random() * 0.16,
-    });
+    const spawn = (): P => {
+      const depth = 0.35 + Math.random() * 0.65;
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        size: (5 + Math.random() * 16) * depth,
+        vy: (0.06 + Math.random() * 0.18) * depth,
+        sway: (4 + Math.random() * 10) * depth,
+        phase: Math.random() * Math.PI * 2,
+        // The occasional near mote burns brighter — depth cues the eye.
+        alpha: (0.05 + Math.random() * 0.16) * (0.45 + 0.55 * depth) + (Math.random() < 0.06 ? 0.12 : 0),
+        depth,
+      };
+    };
 
     const resize = () => {
       w = window.innerWidth;

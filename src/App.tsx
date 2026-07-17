@@ -38,6 +38,7 @@ export default function App() {
   if (!state || !state.profile) {
     return (
       <>
+        <div className="nebula" aria-hidden="true" />
         <Particles />
         <div className="vignette" />
         <Assessment />
@@ -49,6 +50,7 @@ export default function App() {
 
   return (
     <>
+      <div className="nebula" aria-hidden="true" />
       <Particles />
       <div className="vignette" />
       <div className="shell">
