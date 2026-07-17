@@ -380,6 +380,7 @@ function LogDialog({
         initial={{ scale: 0.96, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={tSettle}
+        style={{ maxHeight: '86vh', overflowY: 'auto' }}
       >
         <div className="overlay-eyebrow">DEBRIEF</div>
         <p className="overlay-copy">{desc}</p>
@@ -432,15 +433,15 @@ function LogDialog({
           />
         </div>
 
-        <div className="log-choices">
+        <div className="log-choices log-choices--stack">
           <button className="sys-btn sys-btn--primary" onClick={() => log('MET')}>
             MET STANDARD
           </button>
           <button className="sys-btn" onClick={() => log('EXCEEDED')}>
-            EXCEEDED
+            EXCEEDED — WENT BEYOND
           </button>
           <button className="sys-btn" onClick={() => log('ATTEMPTED')}>
-            ATTEMPTED
+            ATTEMPTED — BELOW STANDARD
           </button>
         </div>
         <p className="log-note">

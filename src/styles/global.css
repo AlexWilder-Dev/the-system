@@ -1303,6 +1303,11 @@ button {
   flex: 1;
 }
 
+/* Three grade buttons cannot share one 312px row — the debrief stacks them. */
+.log-choices--stack {
+  flex-direction: column;
+}
+
 .log-note {
   font-size: 10px;
   letter-spacing: 0.1em;
