@@ -13,7 +13,7 @@ import {
 import { isLoggedOn, resultOn } from '../logic/completions';
 import { xpForResult } from '../logic/credit';
 import { formatDisplayDate } from '../logic/dates';
-import { settle, snap, useAnim, withDelay } from '../motion/springs';
+import { snap, useAnim, useMaterialize } from '../motion/springs';
 import { XPBar } from './XPBar';
 import { usePress, type PressPoint } from './press';
 import { useXpFlyers } from './Flyers';
@@ -132,7 +132,7 @@ function ProtocolPanel({
   onComplete: (pt: PressPoint) => void;
   onUndo: () => void;
 }) {
-  const tSettle = useAnim(settle);
+  const m = useMaterialize(delay);
   const tSnap = useAnim(snap);
   const completed = earnedXp !== undefined;
   const [flash, setFlash] = useState(0);
@@ -153,9 +153,7 @@ function ProtocolPanel({
   return (
     <motion.div
       className={`sys-panel quest-panel${completed ? ' quest-panel--done' : ''}`}
-      initial={{ opacity: 0, scale: 0.96, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={withDelay(tSettle, delay)}
+      {...m}
       whileTap={{ scale: 0.98 }}
       {...press}
       role="button"
@@ -201,15 +199,13 @@ function RoutineStepRow({
   ticked: boolean;
   onToggle: (on: boolean) => void;
 }) {
-  const tSettle = useAnim(settle);
+  const m = useMaterialize(delay);
   const press = usePress({ onTap: () => onToggle(!ticked) });
 
   return (
     <motion.div
       className={`sys-panel routine-row${ticked ? ' routine-row--done' : ''}`}
-      initial={{ opacity: 0, scale: 0.96, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={withDelay(tSettle, delay)}
+      {...m}
       whileTap={{ scale: 0.98 }}
       {...press}
       role="button"

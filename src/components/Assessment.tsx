@@ -4,7 +4,7 @@ import type { Sex } from '../types';
 import { useGame } from '../state/GameContext';
 import { placeHunter, type AssessmentAnswers } from '../logic/assessment';
 import { LETTERS, SUB_RANKS } from '../logic/rank';
-import { dramatic, settle, useAnim } from '../motion/springs';
+import { dramatic, settle, useAnim, useMaterialize } from '../motion/springs';
 
 // The measurement: one question per screen, big tappable options, no typing
 // except the name. The System places the hunter; the user does not configure.
@@ -28,6 +28,7 @@ export function Assessment() {
   const { state, assess } = useGame();
   const tSettle = useAnim(settle);
   const tDramatic = useAnim(dramatic);
+  const mPanel = useMaterialize();
 
   // A migrated hunter already has a name — the System only re-measures.
   const migrated = state !== null;
@@ -55,14 +56,7 @@ export function Assessment() {
   );
 
   const panel = (key: string, children: ReactNode) => (
-    <motion.div
-      key={key}
-      className="awakening-step"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0 }}
-      transition={tSettle}
-    >
+    <motion.div key={key} className="awakening-step" {...mPanel} exit={{ opacity: 0 }}>
       <div className="sys-panel overlay-panel">{children}</div>
     </motion.div>
   );

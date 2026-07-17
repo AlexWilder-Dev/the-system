@@ -14,7 +14,7 @@ import { xpForResult } from '../logic/credit';
 import { addDays, formatDisplayDate, localDateOfISO } from '../logic/dates';
 import { STRENGTH_NOTE, TRACKS } from '../data/protocols';
 import { nextGate } from '../logic/gatecheck';
-import { fade, settle, snap, useAnim, withDelay } from '../motion/springs';
+import { fade, snap, useAnim, useMaterialize } from '../motion/springs';
 import { XPBar } from './XPBar';
 import { usePress } from './press';
 import { useXpFlyers } from './Flyers';
@@ -63,7 +63,7 @@ export function FitnessScreen() {
   const [weekOpen, setWeekOpen] = useState(false);
   const [sessionDetail, setSessionDetail] = useState(false);
   const [debriefing, setDebriefing] = useState(false);
-  const tSettle = useAnim(settle);
+  const mFeatured = useMaterialize();
   const tFade = useAnim(fade);
 
   const tomorrow = addDays(today, 1);
@@ -158,9 +158,7 @@ export function FitnessScreen() {
       {sessionMeta && sessionId && (
         <motion.div
           className={`sys-panel featured-card${sessionResult ? ' quest-panel--done' : ''}`}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={tSettle}
+          {...mFeatured}
           {...(isRest ? restPress : sessionResult ? sessionUndoPress : {})}
           style={isRest || sessionResult ? { cursor: 'pointer' } : undefined}
         >
@@ -292,7 +290,7 @@ function StepsPanel({
   pendingXp: number;
   press: ReturnType<typeof usePress>;
 }) {
-  const tSettle = useAnim(settle);
+  const m = useMaterialize(0.05);
   const tSnap = useAnim(snap);
   const completed = earnedXp !== undefined;
   const [flash, setFlash] = useState(0);
@@ -302,9 +300,7 @@ function StepsPanel({
   return (
     <motion.div
       className={`sys-panel quest-panel${completed ? ' quest-panel--done' : ''}`}
-      initial={{ opacity: 0, scale: 0.96, y: 8 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={withDelay(tSettle, 0.05)}
+      {...m}
       whileTap={{ scale: 0.98 }}
       style={{ marginBottom: 12 }}
       {...press}
@@ -355,7 +351,7 @@ function LogDialog({
   onCancel: () => void;
 }) {
   const tFade = useAnim(fade);
-  const tSettle = useAnim(settle);
+  const mPanel = useMaterialize();
   const [modality, setModality] = useState('RUN');
   const [km, setKm] = useState('');
   const [note, setNote] = useState('');
@@ -377,9 +373,7 @@ function LogDialog({
     <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={tFade}>
       <motion.div
         className="sys-panel overlay-panel"
-        initial={{ scale: 0.96, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={tSettle}
+        {...mPanel}
         style={{ maxHeight: '86vh', overflowY: 'auto' }}
       >
         <div className="overlay-eyebrow">DEBRIEF</div>

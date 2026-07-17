@@ -1,5 +1,5 @@
 import { useReducedMotion } from 'framer-motion';
-import type { Transition } from 'framer-motion';
+import type { Target, TargetAndTransition, Transition } from 'framer-motion';
 
 // The one motion system. Every animated component imports from here —
 // no inline transition configs anywhere else in the codebase.
@@ -28,4 +28,33 @@ export function useAnim(spring: Transition): Transition {
 /** Staggered entrances keep the same physics; only the start time shifts. */
 export function withDelay(t: Transition, delay: number): Transition {
   return { ...t, delay };
+}
+
+export interface Materialize {
+  initial: Target;
+  animate: TargetAndTransition;
+  transition: Transition;
+}
+
+/**
+ * System-window GENERATION, the way windows appear in the show: a horizontal
+ * line of light snaps into existence, then unfolds vertically into the panel
+ * while the flash cools to normal brightness. Spread onto a motion.div.
+ * Reduced motion collapses to the standard fade.
+ */
+export function useMaterialize(delay = 0): Materialize {
+  const reduced = useReducedMotion();
+  if (reduced) {
+    return { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { ...fade, delay } };
+  }
+  return {
+    initial: { opacity: 0, scaleX: 0.55, scaleY: 0.05, filter: 'brightness(2.6)' },
+    animate: {
+      opacity: [0, 1, 1],
+      scaleX: [0.55, 1, 1],
+      scaleY: [0.05, 0.05, 1],
+      filter: ['brightness(2.6)', 'brightness(2.1)', 'brightness(1)'],
+    },
+    transition: { duration: 0.38, times: [0, 0.42, 1], ease: 'easeOut', delay },
+  };
 }

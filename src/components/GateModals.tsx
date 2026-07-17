@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Sex } from '../types';
 import type { GateDef, GateTest } from '../data/gates';
 import { useGame } from '../state/GameContext';
-import { fade, settle, useAnim } from '../motion/springs';
+import { fade, useAnim, useMaterialize } from '../motion/springs';
 import type { GateReport } from '../logic/gatecheck';
 
 /** Declaration: the hunter commits to the attempt; the test becomes today's featured quest. */
@@ -17,15 +17,10 @@ export function GateDeclaration({
   onCancel: () => void;
 }) {
   const tFade = useAnim(fade);
-  const tSettle = useAnim(settle);
+  const mPanel = useMaterialize();
   return (
     <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={tFade}>
-      <motion.div
-        className="sys-panel overlay-panel"
-        initial={{ scale: 0.96, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={tSettle}
-      >
+      <motion.div className="sys-panel overlay-panel" {...mPanel}>
         <div className="overlay-eyebrow">{gate.name}</div>
         <p className="overlay-copy">REQUIREMENTS MET. DECLARE YOUR ATTEMPT?</p>
         <div className="delta-list">
@@ -79,7 +74,7 @@ function fieldsForTest(test: GateTest, sex: Sex): Field[] {
 export function GateDebrief({ gate, sex, onClose }: { gate: GateDef; sex: Sex; onClose: () => void }) {
   const { submitGateReport } = useGame();
   const tFade = useAnim(fade);
-  const tSettle = useAnim(settle);
+  const mPanel = useMaterialize();
   const fields = gate.tests.flatMap((t) => fieldsForTest(t, sex));
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -97,9 +92,7 @@ export function GateDebrief({ gate, sex, onClose }: { gate: GateDef; sex: Sex; o
     <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={tFade}>
       <motion.div
         className="sys-panel overlay-panel"
-        initial={{ scale: 0.96, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={tSettle}
+        {...mPanel}
         style={{ maxHeight: '86vh', overflowY: 'auto' }}
       >
         <div className="overlay-eyebrow">{gate.name} — DEBRIEF</div>
