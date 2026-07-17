@@ -8,6 +8,7 @@ import {
   bestsFromReport,
   evaluateGateReport,
   gateAvailable,
+  nextChallengeDay,
   trackedRequirements,
 } from './gatecheck';
 
@@ -136,5 +137,30 @@ describe('gate debrief evaluation', () => {
 
   it('shortfall lines are empty on a pass', () => {
     expect(attemptShortfalls(gate, 'M', { run2k: 2.4, pushups: 12, squats: 30 })).toEqual([]);
+  });
+});
+
+describe('challenge rationing — one forced attempt per rolling 7 days', () => {
+  const attempt = (date: string, forced: boolean) => ({ date, from: 0, pass: false, shortfalls: [], forced });
+
+  it('a first challenge is always free', () => {
+    expect(nextChallengeDay([], T)).toBeNull();
+  });
+
+  it('a forced attempt 3 days ago locks the challenge until day 7', () => {
+    expect(nextChallengeDay([attempt(d(3), true)], T)).toBe(addDays(d(3), 7));
+  });
+
+  it('unlocks once 7 days have passed', () => {
+    expect(nextChallengeDay([attempt(d(7), true)], T)).toBeNull();
+  });
+
+  it('earned attempts never consume the challenge', () => {
+    expect(nextChallengeDay([attempt(d(1), false), attempt(T, false)], T)).toBeNull();
+  });
+
+  it('only the most recent forced attempt matters', () => {
+    const history = [attempt(d(20), true), attempt(d(2), true)];
+    expect(nextChallengeDay(history, T)).toBe(addDays(d(2), 7));
   });
 });

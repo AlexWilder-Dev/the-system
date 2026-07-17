@@ -6,13 +6,19 @@ import { useGame } from '../state/GameContext';
 import { fade, useAnim, useMaterialize } from '../motion/springs';
 import type { GateReport } from '../logic/gatecheck';
 
-/** Declaration: the hunter commits to the attempt; the test becomes today's featured quest. */
+/**
+ * Declaration: the hunter commits to the attempt; the test becomes today's
+ * featured quest. A forced declaration (challenge) skips the tracked
+ * requirements — the physical standards alone decide the letter.
+ */
 export function GateDeclaration({
   gate,
+  forced = false,
   onEnter,
   onCancel,
 }: {
   gate: GateDef;
+  forced?: boolean;
   onEnter: () => void;
   onCancel: () => void;
 }) {
@@ -21,8 +27,12 @@ export function GateDeclaration({
   return (
     <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={tFade}>
       <motion.div className="sys-panel overlay-panel" {...mPanel}>
-        <div className="overlay-eyebrow">{gate.name}</div>
-        <p className="overlay-copy">REQUIREMENTS MET. DECLARE YOUR ATTEMPT?</p>
+        <div className="overlay-eyebrow">{gate.name}{forced ? ' — CHALLENGE' : ''}</div>
+        <p className="overlay-copy">
+          {forced
+            ? 'YOU CLAIM THE PLACEMENT IS WRONG. THE STANDARDS DO NOT BEND — MEET THEM AND THE RANK IS YOURS.'
+            : 'REQUIREMENTS MET. DECLARE YOUR ATTEMPT?'}
+        </p>
         <div className="delta-list">
           {gate.tests.map((t) => (
             <div className="req-row" key={t.id}>
@@ -30,9 +40,10 @@ export function GateDeclaration({
             </div>
           ))}
         </div>
+        {forced && <p className="log-note">ONE CHALLENGE PER WEEK. PASS OR FAIL, THE RESULT IS RECORDED.</p>}
         <div className="form-actions" style={{ justifyContent: 'center' }}>
           <button className="sys-btn sys-btn--primary" onClick={onEnter}>
-            ENTER THE GATE
+            {forced ? 'DECLARE CHALLENGE' : 'ENTER THE GATE'}
           </button>
           <button className="sys-btn" onClick={onCancel}>
             NOT YET

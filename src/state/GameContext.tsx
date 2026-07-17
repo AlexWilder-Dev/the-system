@@ -55,7 +55,7 @@ type Action =
   | { type: 'UPDATE_QUEST'; quest: Quest }
   | { type: 'SET_QUEST_ACTIVE'; id: string; active: boolean }
   | { type: 'DAILY_RESET'; date: string }
-  | { type: 'GATE_ENTER'; date: string }
+  | { type: 'GATE_ENTER'; date: string; forced: boolean }
   | { type: 'GATE_RESOLVE'; pass: boolean; bests: AppState['gateProgress']; result: Result; record: GateAttemptRecord }
   | { type: 'SHIFT_SESSION'; today: string; tomorrow: string; questIds: string[] }
   | { type: 'UNSHIFT_SESSION'; today: string; tomorrow: string; questIds: string[] }
@@ -169,7 +169,7 @@ function reducer(state: AppState | null, action: Action): AppState | null {
     case 'DAILY_RESET':
       return applyDailyReset(state, action.date);
     case 'GATE_ENTER':
-      return { ...state, gateAttempt: { date: action.date } };
+      return { ...state, gateAttempt: { date: action.date, ...(action.forced ? { forced: true } : {}) } };
     case 'GATE_RESOLVE': {
       const next: AppState = {
         ...state,
@@ -237,7 +237,7 @@ interface GameApi {
   addQuest: (quest: Quest) => void;
   updateQuest: (quest: Quest) => void;
   setQuestActive: (id: string, active: boolean) => void;
-  enterGate: () => void;
+  enterGate: (forced?: boolean) => void;
   submitGateReport: (report: GateReport) => void;
   shiftSession: () => void;
   unshiftSession: () => void;
@@ -455,6 +455,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         from: gate.from,
         pass,
         shortfalls: pass ? [] : attemptShortfalls(gate, state.profile.sex, report),
+        ...(state.gateAttempt?.forced ? { forced: true } : {}),
       };
       const dates = resultDates(state.results);
       dates.add(today);
@@ -596,7 +597,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     addQuest: (quest) => dispatch({ type: 'ADD_QUEST', quest }),
     updateQuest: (quest) => dispatch({ type: 'UPDATE_QUEST', quest }),
     setQuestActive: (id, active) => dispatch({ type: 'SET_QUEST_ACTIVE', id, active }),
-    enterGate: () => dispatch({ type: 'GATE_ENTER', date: today }),
+    enterGate: (forced = false) => dispatch({ type: 'GATE_ENTER', date: today, forced }),
     submitGateReport,
     shiftSession,
     unshiftSession,

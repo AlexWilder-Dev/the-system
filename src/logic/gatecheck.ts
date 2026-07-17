@@ -1,5 +1,6 @@
-import type { AppState, GateProgress, Sex } from '../types';
+import type { AppState, GateAttemptRecord, GateProgress, Sex } from '../types';
 import { GATES, type GateDef, type GateTest } from '../data/gates';
+import { addDays } from './dates';
 import { LETTERS, subProgress } from './rank';
 import {
   consistencyPercent,
@@ -148,6 +149,20 @@ export function testRows(gate: GateDef, sex: Sex, gp: GateProgress): ReqRow[] {
 export function gateAvailable(state: AppState, today: string): boolean {
   if (!state.profile || !nextGate(state.gatesPassed)) return false;
   return trackedRequirements(state, today).every((r) => r.met);
+}
+
+/**
+ * The challenge path: a hunter who believes their placement was wrong may
+ * FORCE the Gate — skip the tracked requirements and face the physical
+ * standards directly. Rationed to one forced attempt per rolling 7 days
+ * (earned attempts are never rationed). Returns the date the next challenge
+ * unlocks, or null if one is free now.
+ */
+export function nextChallengeDay(history: GateAttemptRecord[], today: string): string | null {
+  const last = [...history].reverse().find((a) => a.forced);
+  if (!last) return null;
+  const unlock = addDays(last.date, 7);
+  return unlock > today ? unlock : null;
 }
 
 // ---------------------------------------------------------------------------

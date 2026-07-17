@@ -60,6 +60,8 @@ export interface GateAttemptRecord {
   from: number; // letter index the gate promotes out of
   pass: boolean;
   shortfalls: string[]; // failed tests as "LABEL — reported / standard"
+  /** True for a challenge — a forced attempt that skipped the tracked requirements. */
+  forced?: boolean;
 }
 
 export interface AppState {
@@ -76,7 +78,7 @@ export interface AppState {
   prescriptions: DayPrescription[];
   gateProgress: GateProgress;
   trackLevels: number[]; // per cardio slot [0..2]; advance on MET/EXCEEDED only
-  gateAttempt: { date: string } | null; // declared trial awaiting a debrief
+  gateAttempt: { date: string; forced?: boolean } | null; // declared trial awaiting a debrief
   gateHistory: GateAttemptRecord[];
   dayOverrides: Record<string, number>; // date -> day-of-week template to use (session shifting)
   /** Morning structure steps ticked per date — no XP, no consistency weight. */

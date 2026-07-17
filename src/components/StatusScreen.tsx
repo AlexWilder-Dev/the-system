@@ -4,7 +4,7 @@ import { levelForXp } from '../logic/xp';
 import { displayRank, subProgress, LETTERS } from '../logic/rank';
 import { computeStats, STAT_KEYS } from '../logic/stats';
 import { streakBonusPercent } from '../logic/streak';
-import { gateAvailable, nextGate, testRows, trackedRequirements } from '../logic/gatecheck';
+import { gateAvailable, nextChallengeDay, nextGate, testRows, trackedRequirements } from '../logic/gatecheck';
 import { isDeloadWeek, weekNumberFor } from '../logic/schedule';
 import { formatDisplayDate, localDateOfISO } from '../logic/dates';
 import { TRACKS } from '../data/protocols';
@@ -39,8 +39,9 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
     () => (gate && s.profile ? testRows(gate, s.profile.sex, s.gateProgress) : []),
     [gate, s.profile, s.gateProgress],
   );
-  const [declaring, setDeclaring] = useState(false);
+  const [declaring, setDeclaring] = useState<'earned' | 'challenge' | null>(null);
   const [debriefing, setDebriefing] = useState(false);
+  const challengeUnlock = nextChallengeDay(s.gateHistory, today);
 
   const lastAttempt = [...s.gateHistory].reverse().find((a) => a.from === s.gatesPassed && !a.pass);
   const trackLine = () => {
@@ -121,16 +122,34 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
 
       {available && !s.gateAttempt && (
         <div className="gate-cta">
-          <button className="sys-btn sys-btn--primary" onClick={() => setDeclaring(true)}>
+          <button className="sys-btn sys-btn--primary" onClick={() => setDeclaring('earned')}>
             ENTER THE GATE
           </button>
+        </div>
+      )}
+
+      {/* The challenge path: requirements unmet, but the standards will hear you out. */}
+      {gate && !available && !s.gateAttempt && (
+        <div className="gate-cta">
+          {challengeUnlock ? (
+            <p className="challenge-note">CHALLENGE SPENT — NEXT ATTEMPT {formatDisplayDate(challengeUnlock)}</p>
+          ) : (
+            <>
+              <button className="sys-btn" onClick={() => setDeclaring('challenge')}>
+                CHALLENGE THE GATE
+              </button>
+              <p className="challenge-note">SKIP THE REQUIREMENTS. MEET THE STANDARD. ONCE PER WEEK.</p>
+            </>
+          )}
         </div>
       )}
 
       {s.gateAttempt && (
         <SysPanel className="featured-card" delay={0}>
           <div className="featured-kicker">
-            <span className="dim-label">{gate?.name ?? 'GATE'} — TRIAL DECLARED</span>
+            <span className="dim-label">
+              {gate?.name ?? 'GATE'} — {s.gateAttempt.forced ? 'CHALLENGE DECLARED' : 'TRIAL DECLARED'}
+            </span>
           </div>
           <p className="featured-rx">COMPLETE THE PHYSICAL TEST. REPORT WHEN DONE.</p>
           <div className="gate-cta" style={{ marginTop: 12, marginBottom: 0 }}>
@@ -214,11 +233,12 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
       {declaring && gate && (
         <GateDeclaration
           gate={gate}
+          forced={declaring === 'challenge'}
           onEnter={() => {
-            enterGate();
-            setDeclaring(false);
+            enterGate(declaring === 'challenge');
+            setDeclaring(null);
           }}
-          onCancel={() => setDeclaring(false)}
+          onCancel={() => setDeclaring(null)}
         />
       )}
       {debriefing && gate && s.profile && (

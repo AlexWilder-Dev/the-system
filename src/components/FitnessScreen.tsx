@@ -144,7 +144,9 @@ export function FitnessScreen() {
       {s.gateAttempt && gate && (
         <SysPanel className="featured-card" delay={0}>
           <div className="featured-kicker">
-            <span className="dim-label">{gate.name} — TRIAL DECLARED</span>
+            <span className="dim-label">
+              {gate.name} — {s.gateAttempt.forced ? 'CHALLENGE DECLARED' : 'TRIAL DECLARED'}
+            </span>
           </div>
           <p className="featured-rx">TODAY IS THE TEST. COMPLETE IT, THEN REPORT.</p>
           <div className="log-choices" style={{ marginTop: 12 }}>
