@@ -14,6 +14,7 @@ export function migrateV1(v1: AppStateV1): AppState {
     xp: v1.xp,
     gatesPassed: 0,
     letterXpStart: 0,
+    statSeeds: { STR: 0, VIT: 0, INT: 0, FOC: 0, WIL: 0 },
     profile: null,
     quests: v1.quests,
     results: v1.log.map((c) => ({

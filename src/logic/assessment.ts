@@ -1,4 +1,4 @@
-import type { GateProgress, Sex, TrackId } from '../types';
+import type { GateProgress, Sex, StatKey, TrackId } from '../types';
 import { xpRequiredForLevel } from './xp';
 import { letterStartLevel } from './rank';
 
@@ -25,6 +25,8 @@ export interface Placement {
   track: TrackId;
   seedXp: number;
   seeds: Partial<GateProgress>;
+  /** What the measurement already proved — the stat panel must reflect it. */
+  statSeeds: Record<StatKey, number>;
 }
 
 const TRACK_BY_RUN: TrackId[] = ['foundation', 'builder5k', 'bridge10k', 'performance', 'performance'];
@@ -48,6 +50,7 @@ export function placeHunter(a: AssessmentAnswers): Placement {
   if (letter >= 3 && (a.exercise < 2 || (a.wake < 1 && a.routine < 2))) letter = 2;
 
   const letterIndex = letter as Placement['letterIndex'];
+  const identity = letterIndex * 2; // the tier itself carries a baseline
   return {
     letterIndex,
     track: TRACK_BY_RUN[a.run],
@@ -55,5 +58,12 @@ export function placeHunter(a: AssessmentAnswers): Placement {
     // not LV 1). Tier progress itself starts at zero — letterXpStart = seedXp.
     seedXp: xpRequiredForLevel(letterStartLevel(letterIndex)),
     seeds: { bestRun_km: RUN_KM_SEED[a.run], bestPushups: PUSHUP_SEED[a.pushups] },
+    statSeeds: {
+      STR: identity + a.pushups * 3,
+      VIT: identity + a.run * 3,
+      INT: identity,
+      FOC: identity + a.routine * 2 + a.wake,
+      WIL: identity + a.wake * 2 + a.routine,
+    },
   };
 }

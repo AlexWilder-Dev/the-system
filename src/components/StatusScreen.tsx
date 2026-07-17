@@ -29,7 +29,10 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
   const prog = subProgress(s.gatesPassed, xpInLetter);
   const gate = nextGate(s.gatesPassed);
   const available = gateAvailable(s, today);
-  const stats = useMemo(() => computeStats(s.quests, s.results), [s.quests, s.results]);
+  const stats = useMemo(
+    () => computeStats(s.quests, s.results, s.statSeeds, level),
+    [s.quests, s.results, s.statSeeds, level],
+  );
   const bonus = streakBonusPercent(streak.days);
   const tracked = useMemo(() => (gate ? trackedRequirements(s, today) : []), [s, today, gate]);
   const tests = useMemo(
@@ -81,9 +84,14 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
 
       {/* Signature element. In ?debug mode a tap grants 100 XP for testing. */}
       <div className="rank-wrap" onClick={debug ? grantDebugXp : undefined}>
-        {/* Aura intensity tracks the sub-rank; mastery turns it gold. */}
+        {/* Aura grows with the LETTER and sharpens with the sub-rank:
+            E-III barely smoulders, B-III clearly outburns C-III, mastery gilds it. */}
         <div
-          className={`rank-aura rank-aura--${rank.sub.toLowerCase()}${rank.mastered ? ' rank-aura--mastered' : ''}`}
+          className={`rank-aura${rank.mastered ? ' rank-aura--mastered' : ''}`}
+          style={{
+            opacity: Math.min(0.95, (0.26 + rank.letterIndex * 0.12) * (rank.sub === 'III' ? 0.55 : rank.sub === 'II' ? 0.78 : 1)),
+            width: `min(${48 + rank.letterIndex * 4}vh, ${84 + rank.letterIndex * 3}vw)`,
+          }}
           aria-hidden="true"
         />
         {available && (

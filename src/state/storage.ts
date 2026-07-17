@@ -88,6 +88,14 @@ function withDefaults(state: AppState): AppState {
       typeof state.letterXpStart === 'number'
         ? state.letterXpStart
         : Math.min(state.xp, xpRequiredForLevel(letterStartLevel(state.gatesPassed))),
+    // Pre-seed saves: grant the letter's identity baseline across the board.
+    statSeeds: state.statSeeds ?? {
+      STR: state.gatesPassed * 2,
+      VIT: state.gatesPassed * 2,
+      INT: state.gatesPassed * 2,
+      FOC: state.gatesPassed * 2,
+      WIL: state.gatesPassed * 2,
+    },
   };
 }
 

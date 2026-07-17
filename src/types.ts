@@ -68,6 +68,8 @@ export interface AppState {
   xp: number; // lifetime total — drives LEVEL and stats
   gatesPassed: number; // 0=E … 5=S; the letter IS this — promotion ONLY via Gates
   letterXpStart: number; // lifetime XP when the current letter was entered; xp − this = tier progress
+  /** Baseline stat points the assessment measured — a B hunter never starts at all-10s. */
+  statSeeds: Record<StatKey, number>;
   profile: Profile | null; // null = assessment pending (fresh, migrated, or re-measuring)
   quests: Quest[]; // PERSONAL quests only
   results: Result[];

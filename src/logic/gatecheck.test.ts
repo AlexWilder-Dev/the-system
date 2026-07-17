@@ -32,6 +32,7 @@ function makeState(opts: { xp: number; metDays: number; windowDays?: number }): 
     xp: opts.xp,
     gatesPassed: 0,
     letterXpStart: 0,
+    statSeeds: { STR: 0, VIT: 0, INT: 0, FOC: 0, WIL: 0 },
     profile: { sex: 'M', wakeWindowStart: '06:30', track: 'builder5k', assessedAt: '2026-06-01T00:00:00.000Z' },
     quests: [],
     results,

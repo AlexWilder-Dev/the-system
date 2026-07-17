@@ -84,4 +84,13 @@ describe('placement — tracks and seeds', () => {
     expect(p.seeds.bestRun_km).toBe(15);
     expect(p.seeds.bestPushups).toBe(50);
   });
+
+  it('seeds stats from what the measurement proved — a B hunter never starts flat', () => {
+    const b = placeHunter({ ...base, run: 4, pushups: 3, build: 3, exercise: 3, wake: 2, routine: 2 });
+    expect(b.statSeeds.STR).toBe(15); // letter 3 × 2 + pushups 3 × 3
+    expect(b.statSeeds.VIT).toBe(18); // letter 3 × 2 + run 4 × 3
+    expect(b.statSeeds.WIL).toBe(12); // letter 3 × 2 + wake 2 × 2 + routine 2
+    const e = placeHunter(base);
+    expect(e.statSeeds).toEqual({ STR: 0, VIT: 0, INT: 0, FOC: 0, WIL: 0 });
+  });
 });

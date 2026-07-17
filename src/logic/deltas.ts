@@ -1,24 +1,22 @@
 import type { Quest, Result, StatKey } from '../types';
-import { questMeta } from './quests';
-import { xpRequiredForLevel } from './xp';
+import { computeStats } from './stats';
 
 /**
- * Stat gains earned since the hunter reached `sinceLevel` — shown on the
- * level-up panel. Walks the results backwards through the XP earned inside
- * the level that was just cleared.
+ * Stat gains shown on the level-up panel: simply the difference between the
+ * stat table before and after the XP landed — so level growth, seeds and
+ * result counts can never disagree with what the panel claims.
  */
-export function statDeltasSinceLevel(
+export function statDeltas(
   quests: Quest[],
-  results: Result[],
-  totalXp: number,
-  sinceLevel: number,
+  statSeeds: Record<StatKey, number>,
+  before: { results: Result[]; level: number },
+  after: { results: Result[]; level: number },
 ): Partial<Record<StatKey, number>> {
+  const a = computeStats(quests, before.results, statSeeds, before.level);
+  const b = computeStats(quests, after.results, statSeeds, after.level);
   const deltas: Partial<Record<StatKey, number>> = {};
-  let remaining = totalXp - xpRequiredForLevel(sinceLevel);
-  for (let i = results.length - 1; i >= 0 && remaining > 0; i--) {
-    const meta = questMeta(results[i].questId, quests);
-    if (meta) deltas[meta.stat] = (deltas[meta.stat] ?? 0) + 1;
-    remaining -= results[i].xpEarned;
+  for (const key of Object.keys(b) as StatKey[]) {
+    if (b[key] > a[key]) deltas[key] = b[key] - a[key];
   }
   return deltas;
 }

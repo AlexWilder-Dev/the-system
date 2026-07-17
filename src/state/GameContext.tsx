@@ -18,7 +18,7 @@ import { performanceCredit, xpForResult } from '../logic/credit';
 import { LETTERS, subProgress, type Letter } from '../logic/rank';
 import { computeStreak, type StreakResult } from '../logic/streak';
 import { needsDailyReset, applyDailyReset } from '../logic/reset';
-import { statDeltasSinceLevel } from '../logic/deltas';
+import { statDeltas } from '../logic/deltas';
 import { resultDates, isLoggedOn } from '../logic/completions';
 import { questMeta, parseCardioId } from '../logic/quests';
 import { advanceOnResult, dayOfWeek, isDeloadWeek, prescribeForDate, weekNumberFor } from '../logic/schedule';
@@ -38,7 +38,15 @@ export type Overlay =
 
 type Action =
   | { type: 'INIT'; state: AppState }
-  | { type: 'PLACE'; profile: Profile; gatesPassed: number; xp: number; seeds: Partial<AppState['gateProgress']>; date: string }
+  | {
+      type: 'PLACE';
+      profile: Profile;
+      gatesPassed: number;
+      xp: number;
+      seeds: Partial<AppState['gateProgress']>;
+      statSeeds: Record<StatKey, number>;
+      date: string;
+    }
   | { type: 'PRESCRIBE'; date: string; questIds: string[] }
   | { type: 'LOG_RESULT'; result: Result; advance?: { trackId: TrackId; slotLevels: number[] }; bestRunKm?: number }
   | { type: 'UNDO_RESULT'; questId: string; date: string }
@@ -52,6 +60,7 @@ type Action =
   | { type: 'SHIFT_SESSION'; today: string; tomorrow: string; questIds: string[] }
   | { type: 'UNSHIFT_SESSION'; today: string; tomorrow: string; questIds: string[] }
   | { type: 'SET_WAKE'; time: string }
+  | { type: 'DEV_RANK_UP' }
   | { type: 'REASSESS' }
   | { type: 'RESET' }
   | { type: 'IMPORT'; state: AppState }
@@ -86,6 +95,7 @@ function reducer(state: AppState | null, action: Action): AppState | null {
         // A newly named letter starts its tier at III; re-measuring inside
         // the same letter keeps the tier progress already earned.
         letterXpStart: gatesPassed !== state.gatesPassed ? xp : Math.min(state.letterXpStart, xp),
+        statSeeds: action.statSeeds,
         gateProgress: { ...state.gateProgress, ...action.seeds },
         trackLevels: [0, 0, 0],
         gateAttempt: null,
@@ -197,6 +207,10 @@ function reducer(state: AppState | null, action: Action): AppState | null {
     }
     case 'SET_WAKE':
       return state.profile ? { ...state, profile: { ...state.profile, wakeWindowStart: action.time } } : state;
+    case 'DEV_RANK_UP':
+      // DEV TEST only: fakes a Gate pass so rank graphics can be inspected.
+      if (state.gatesPassed >= 5) return state;
+      return { ...state, gatesPassed: state.gatesPassed + 1, letterXpStart: state.xp };
     case 'REASSESS':
       // The hunter believes the measurement is stale. Dropping the profile
       // routes back to the assessment; PLACE re-seats them, history intact.
@@ -234,6 +248,10 @@ interface GameApi {
   grantDebugXp: () => void;
   /** DEV TEST: grants exactly the XP to reach the next level — for graphics testing. */
   devLevelUp: () => void;
+  /** DEV TEST: grants exactly the XP to the next sub-rank (no-op at X-I). */
+  devSubRankUp: () => void;
+  /** DEV TEST: fakes a Gate pass — letter up, tier restarts, full ceremony. */
+  devRankUp: () => void;
   debugAdvanceDay: () => void;
   debugFillToday: (status: ResultStatus) => void;
   overlay: Overlay | null;
@@ -310,7 +328,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         events.push({
           kind: 'levelup',
           level: after,
-          deltas: statDeltasSinceLevel(s.quests, newResults, s.xp + xpEarned, before),
+          deltas: statDeltas(
+            s.quests,
+            s.statSeeds,
+            { results: s.results, level: before },
+            { results: newResults, level: after },
+          ),
         });
       }
       // Sub-ranks move on XP within the letter — independent of lifetime levels.
@@ -482,6 +505,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DEBUG_XP', amount });
   }, [state, progressEvents, pushOverlays]);
 
+  const devSubRankUp = useCallback(() => {
+    if (!state) return;
+    const prog = subProgress(state.gatesPassed, state.xp - state.letterXpStart);
+    if (prog.into === null || prog.needed === null) return; // tier mastered — use RANK UP
+    const amount = prog.needed - prog.into;
+    pushOverlays(progressEvents(state, amount, state.results));
+    dispatch({ type: 'DEBUG_XP', amount });
+  }, [state, progressEvents, pushOverlays]);
+
+  const devRankUp = useCallback(() => {
+    if (!state || state.gatesPassed >= 5) return;
+    const gate = nextGate(state.gatesPassed);
+    dispatch({ type: 'DEV_RANK_UP' });
+    pushOverlays([
+      { kind: 'rankup', letter: LETTERS[Math.min(LETTERS.length - 1, state.gatesPassed + 1)], gateName: gate?.name ?? 'GATE' },
+    ]);
+  }, [state, pushOverlays]);
+
   const debugAdvanceDay = useCallback(() => {
     setDayOffset((n) => {
       saveDebugOffset(n + 1);
@@ -515,7 +556,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       };
       if (state) {
         // Migrated or re-measuring hunter: keep XP/history, the System just re-measures.
-        dispatch({ type: 'PLACE', profile, gatesPassed: placement.letterIndex, xp: placement.seedXp, seeds: placement.seeds, date: today });
+        dispatch({
+          type: 'PLACE',
+          profile,
+          gatesPassed: placement.letterIndex,
+          xp: placement.seedXp,
+          seeds: placement.seeds,
+          statSeeds: placement.statSeeds,
+          date: today,
+        });
       } else {
         dispatch({
           type: 'INIT',
@@ -525,6 +574,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             xp: placement.seedXp,
             gatesPassed: placement.letterIndex,
             letterXpStart: placement.seedXp,
+            statSeeds: placement.statSeeds,
             profile,
             quests: [],
             results: [],
@@ -563,6 +613,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     },
     grantDebugXp,
     devLevelUp,
+    devSubRankUp,
+    devRankUp,
     debugAdvanceDay,
     debugFillToday,
     overlay: queue[0] ?? null,

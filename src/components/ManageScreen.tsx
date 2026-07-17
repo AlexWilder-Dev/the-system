@@ -24,6 +24,8 @@ export function ManageScreen({ openFormSignal, onBack }: { openFormSignal: numbe
     requestReassess,
     resetAll,
     devLevelUp,
+    devSubRankUp,
+    devRankUp,
   } = useGame();
   const s = state!;
   const active = s.quests.filter((q) => q.active);
@@ -195,15 +197,24 @@ export function ManageScreen({ openFormSignal, onBack }: { openFormSignal: numbe
         <p className="manage-note">BACKUP IS MANUAL. EXPORT REGULARLY.</p>
       </section>
 
-      {/* TEMPORARY — graphics testing hook, remove before "release". */}
+      {/* TEMPORARY — graphics testing hooks, remove before "release". */}
       <section className="manage-section">
         <span className="dim-label">DEV TEST</span>
-        <div className="data-actions" style={{ marginTop: 8 }}>
+        <div className="data-actions" style={{ marginTop: 8, flexWrap: 'wrap' }}>
           <button className="sys-btn" onClick={devLevelUp}>
-            DEV TEST — LEVEL UP
+            LEVEL UP
+          </button>
+          <button className="sys-btn" onClick={devSubRankUp}>
+            SUB-RANK UP
+          </button>
+          <button className="sys-btn" onClick={devRankUp}>
+            RANK UP
           </button>
         </div>
-        <p className="manage-note">GRANTS EXACTLY THE XP TO REACH THE NEXT LEVEL. FIRES THE FULL CEREMONY.</p>
+        <p className="manage-note">
+          LEVEL UP GRANTS THE XP TO THE NEXT LEVEL. SUB-RANK UP JUMPS TO THE NEXT TIER STEP (AT X-I USE RANK UP).
+          RANK UP FAKES A GATE PASS — LETTER, AURA AND CEREMONY.
+        </p>
       </section>
 
       <section className="manage-section">

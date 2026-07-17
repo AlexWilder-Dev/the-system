@@ -1201,18 +1201,6 @@ button {
   pointer-events: none;
 }
 
-.rank-aura--iii {
-  opacity: 0.3;
-}
-
-.rank-aura--ii {
-  opacity: 0.55;
-}
-
-.rank-aura--i {
-  opacity: 0.85;
-}
-
 .rank-aura--mastered {
   background: conic-gradient(
     from 0deg,
