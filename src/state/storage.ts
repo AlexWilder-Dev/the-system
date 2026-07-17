@@ -1,5 +1,7 @@
 import type { AppState, AppStateV1, Difficulty, StatKey, TrackId } from '../types';
 import { migrateV1 } from '../logic/migrate';
+import { letterStartLevel } from '../logic/rank';
+import { xpRequiredForLevel } from '../logic/xp';
 
 // Single localStorage key, unchanged from v1; the version field routes migration.
 const KEY = 'the-system-v1';
@@ -80,6 +82,12 @@ function withDefaults(state: AppState): AppState {
     ...state,
     gateHistory: state.gateHistory ?? [],
     routineTicks: state.routineTicks ?? {},
+    // Pre-tier saves: treat the letter's old band start as the tier entry
+    // mark, so XP earned since placement carries into sub-rank progress.
+    letterXpStart:
+      typeof state.letterXpStart === 'number'
+        ? state.letterXpStart
+        : Math.min(state.xp, xpRequiredForLevel(letterStartLevel(state.gatesPassed))),
   };
 }
 

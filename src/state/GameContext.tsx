@@ -14,7 +14,7 @@ import { ROUTINE_BONUS_ID, ROUTINE_BONUS_XP, ROUTINE_STEPS } from '../data/proto
 import { addDays, localDateOfISO, localDateStr } from '../logic/dates';
 import { levelForXp } from '../logic/xp';
 import { performanceCredit, xpForResult } from '../logic/credit';
-import { displayRank, type Letter } from '../logic/rank';
+import { LETTERS, subProgress, type Letter } from '../logic/rank';
 import { computeStreak, type StreakResult } from '../logic/streak';
 import { needsDailyReset, applyDailyReset } from '../logic/reset';
 import { statDeltasSinceLevel } from '../logic/deltas';
@@ -29,7 +29,8 @@ export const MAX_ACTIVE_QUESTS = 5;
 export const MORNING_CLOSE_HOUR = 12;
 
 export type Overlay =
-  | { kind: 'levelup'; level: number; subLabel: string | null; deltas: Partial<Record<StatKey, number>> }
+  | { kind: 'levelup'; level: number; deltas: Partial<Record<StatKey, number>> }
+  | { kind: 'subrank'; label: string; mastered: boolean }
   | { kind: 'rankup'; letter: Letter; gateName: string }
   | { kind: 'gatefail' }
   | { kind: 'stamp' };
@@ -70,15 +71,20 @@ function reducer(state: AppState | null, action: Action): AppState | null {
   if (!state) return state;
 
   switch (action.type) {
-    case 'PLACE':
+    case 'PLACE': {
       // Re-measurement keeps XP and history; letters are earned at Gates and
       // never downgrade. Today's (and any future) prescriptions and shifts are
       // stale under the new placement — drop them so they regenerate.
+      const gatesPassed = Math.max(state.gatesPassed, action.gatesPassed);
+      const xp = Math.max(state.xp, action.xp);
       return {
         ...state,
         profile: action.profile,
-        gatesPassed: Math.max(state.gatesPassed, action.gatesPassed),
-        xp: Math.max(state.xp, action.xp),
+        gatesPassed,
+        xp,
+        // A newly named letter starts its tier at III; re-measuring inside
+        // the same letter keeps the tier progress already earned.
+        letterXpStart: gatesPassed !== state.gatesPassed ? xp : Math.min(state.letterXpStart, xp),
         gateProgress: { ...state.gateProgress, ...action.seeds },
         trackLevels: [0, 0, 0],
         gateAttempt: null,
@@ -87,6 +93,7 @@ function reducer(state: AppState | null, action: Action): AppState | null {
           Object.entries(state.dayOverrides).filter(([date]) => date < action.date),
         ),
       };
+    }
     case 'PRESCRIBE':
       return withPrescription(state, action.date, action.questIds);
     case 'LOG_RESULT': {
@@ -161,7 +168,10 @@ function reducer(state: AppState | null, action: Action): AppState | null {
         results: [...state.results, action.result],
         gateHistory: [...state.gateHistory, action.record],
       };
-      return action.pass ? { ...next, gatesPassed: Math.min(5, state.gatesPassed + 1) } : next;
+      // A pass enters the next letter at X-III: the tier clock restarts.
+      return action.pass
+        ? { ...next, gatesPassed: Math.min(5, state.gatesPassed + 1), letterXpStart: next.xp }
+        : next;
     }
     case 'SHIFT_SESSION': {
       const overrides = {
@@ -287,23 +297,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (events.length) setQueue((prev) => [...prev, ...events]);
   }, []);
 
-  /** Level-up detection shared by result logging and debug XP. */
-  const levelEvents = useCallback(
+  /** Level-up and sub-rank detection shared by result logging and debug XP. */
+  const progressEvents = useCallback(
     (s: AppState, xpEarned: number, newResults: Result[]): Overlay[] => {
+      const events: Overlay[] = [];
       const before = levelForXp(s.xp);
       const after = levelForXp(s.xp + xpEarned);
-      if (after <= before) return [];
-      const rankBefore = displayRank(before, s.gatesPassed);
-      const rankAfter = displayRank(after, s.gatesPassed);
-      const subChanged = rankBefore.letter !== rankAfter.letter || rankBefore.sub !== rankAfter.sub;
-      return [
-        {
+      if (after > before) {
+        events.push({
           kind: 'levelup',
           level: after,
-          subLabel: subChanged ? `${rankAfter.letter}-${rankAfter.sub}` : null,
           deltas: statDeltasSinceLevel(s.quests, newResults, s.xp + xpEarned, before),
-        },
-      ];
+        });
+      }
+      // Sub-ranks move on XP within the letter — independent of lifetime levels.
+      const subBefore = subProgress(s.gatesPassed, s.xp - s.letterXpStart).sub;
+      const subAfter = subProgress(s.gatesPassed, s.xp + xpEarned - s.letterXpStart).sub;
+      if (subBefore !== subAfter) {
+        const letter = LETTERS[Math.min(s.gatesPassed, LETTERS.length - 1)];
+        events.push({ kind: 'subrank', label: `${letter}-${subAfter}`, mastered: subAfter === 'I' });
+      }
+      return events;
     },
     [],
   );
@@ -372,7 +386,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (bonus) dispatch({ type: 'LOG_RESULT', result: bonus });
       const totalXp = xpEarned + (bonus?.xpEarned ?? 0);
 
-      const events = levelEvents(state, totalXp, [...state.results, result]);
+      const events = progressEvents(state, totalXp, [...state.results, result]);
       // Daily stamp: every still-pending prescribed quest + active personal quest done.
       const pending = todayIds.filter((id) => id !== questId && !isLoggedOn(state.results, id, today));
       const personalPending = state.quests.filter(
@@ -384,7 +398,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       pushOverlays(events);
       return totalXp;
     },
-    [state, today, todayIds, morningOpen, routineTicksToday, routineBonusIfDue, levelEvents, pushOverlays],
+    [state, today, todayIds, morningOpen, routineTicksToday, routineBonusIfDue, progressEvents, pushOverlays],
   );
 
   const tickRoutine = useCallback(
@@ -396,10 +410,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const bonus = routineBonusIfDue(state.results, ticks);
       if (bonus) {
         dispatch({ type: 'LOG_RESULT', result: bonus });
-        pushOverlays(levelEvents(state, bonus.xpEarned, state.results));
+        pushOverlays(progressEvents(state, bonus.xpEarned, state.results));
       }
     },
-    [state, today, routineTicksToday, routineBonusIfDue, levelEvents, pushOverlays],
+    [state, today, routineTicksToday, routineBonusIfDue, progressEvents, pushOverlays],
   );
 
   const submitGateReport = useCallback(
@@ -422,7 +436,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'GATE_RESOLVE', pass, bests, result, record });
       pushOverlays(
         pass
-          ? [{ kind: 'rankup', letter: displayRank(levelForXp(state.xp + xpEarned), state.gatesPassed + 1).letter, gateName: gate.name }]
+          ? [{ kind: 'rankup', letter: LETTERS[Math.min(LETTERS.length - 1, state.gatesPassed + 1)], gateName: gate.name }]
           : [{ kind: 'gatefail' }],
       );
     },
@@ -453,9 +467,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const grantDebugXp = useCallback(() => {
     if (!state) return;
-    pushOverlays(levelEvents(state, 100, state.results));
+    pushOverlays(progressEvents(state, 100, state.results));
     dispatch({ type: 'DEBUG_XP', amount: 100 });
-  }, [state, levelEvents, pushOverlays]);
+  }, [state, progressEvents, pushOverlays]);
 
   const debugAdvanceDay = useCallback(() => {
     setDayOffset((n) => {
@@ -499,6 +513,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             hunter: { name, awakenedAt: now },
             xp: placement.seedXp,
             gatesPassed: placement.letterIndex,
+            letterXpStart: placement.seedXp,
             profile,
             quests: [],
             results: [],

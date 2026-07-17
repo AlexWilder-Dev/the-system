@@ -65,8 +65,9 @@ export interface GateAttemptRecord {
 export interface AppState {
   version: 2;
   hunter: { name: string; awakenedAt: string };
-  xp: number; // lifetime total — keeps accruing past a letter cap
-  gatesPassed: number; // 0=E … 5=S; letter promotion ONLY via Gates
+  xp: number; // lifetime total — drives LEVEL and stats
+  gatesPassed: number; // 0=E … 5=S; the letter IS this — promotion ONLY via Gates
+  letterXpStart: number; // lifetime XP when the current letter was entered; xp − this = tier progress
   profile: Profile | null; // null = assessment pending (fresh, migrated, or re-measuring)
   quests: Quest[]; // PERSONAL quests only
   results: Result[];

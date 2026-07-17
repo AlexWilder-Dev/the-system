@@ -47,5 +47,6 @@ describe('v1 → v2 migration (AC3)', () => {
     const s = migrateV1(v1);
     expect(s.gateHistory).toEqual([]);
     expect(s.routineTicks).toEqual({});
+    expect(s.letterXpStart).toBe(0); // all lifetime XP counts toward the E tier
   });
 });

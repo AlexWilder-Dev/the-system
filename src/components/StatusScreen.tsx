@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useGame } from '../state/GameContext';
 import { levelForXp } from '../logic/xp';
-import { displayRank, letterStartLevel, LETTERS, SUB_RANKS } from '../logic/rank';
+import { displayRank, subProgress, LETTERS } from '../logic/rank';
 import { computeStats, STAT_KEYS } from '../logic/stats';
 import { streakBonusPercent } from '../logic/streak';
 import { gateAvailable, nextGate, testRows, trackedRequirements } from '../logic/gatecheck';
@@ -24,7 +24,9 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
   const { state, today, streak, debug, grantDebugXp, enterGate } = useGame();
   const s = state!;
   const level = levelForXp(s.xp);
-  const rank = displayRank(level, s.gatesPassed);
+  const xpInLetter = s.xp - s.letterXpStart;
+  const rank = displayRank(s.gatesPassed, xpInLetter);
+  const prog = subProgress(s.gatesPassed, xpInLetter);
   const gate = nextGate(s.gatesPassed);
   const available = gateAvailable(s, today);
   const stats = useMemo(() => computeStats(s.quests, s.results), [s.quests, s.results]);
@@ -48,27 +50,20 @@ export function StatusScreen({ onManage }: { onManage: () => void }) {
 
   const nextLine = () => {
     if (!gate) return <>MAX RANK. THE SYSTEM HAS NOTHING LEFT TO TEACH.</>;
-    if (rank.capped) {
-      if (available) return <>GATE AVAILABLE.</>;
-      const met = tracked.filter((r) => r.met).length;
+    // Sub-ranks sharpen the tier you are; the Gate is the only way out of it.
+    if (!rank.mastered && prog.into !== null && prog.needed !== null) {
+      const nextSub = rank.sub === 'III' ? 'II' : 'I';
       return (
         <>
-          GATE REQUIREMENTS: <span className="num">{met} / {tracked.length}</span>
+          NEXT: {rank.letter}-{nextSub} — <span className="num">{prog.needed - prog.into} XP</span>
         </>
       );
     }
-    const subIdx = SUB_RANKS.indexOf(rank.sub);
-    if (subIdx < 2) {
-      const nextLevel = letterStartLevel(rank.letterIndex) + 3 * (subIdx + 1);
-      return (
-        <>
-          NEXT: {rank.letter}-{SUB_RANKS[subIdx + 1]} — LV <span className="num">{nextLevel}</span>
-        </>
-      );
-    }
+    if (available) return <>TIER MASTERED. GATE AVAILABLE.</>;
+    const met = tracked.filter((r) => r.met).length;
     return (
       <>
-        NEXT: {gate.name} — LV <span className="num">{letterStartLevel(rank.letterIndex + 1)}</span> + REQUIREMENTS
+        TIER MASTERED — GATE REQUIREMENTS: <span className="num">{met} / {tracked.length}</span>
       </>
     );
   };

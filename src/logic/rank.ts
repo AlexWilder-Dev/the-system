@@ -1,7 +1,11 @@
-// v2 rank structure: six letters, three sub-ranks each, three XP levels per
-// sub-rank (v1 XP curve unchanged). Letter bands by level: E 1–9, D 10–18,
-// C 19–27, B 28–36, A 37–45, S 46+. XP levels keep accruing past a band, but
-// the DISPLAYED letter is capped by gates passed — letters are earned at Gates.
+// v3 rank structure: the LETTER is who you are — an identity tier that only
+// a Gate (a proven capability jump, e.g. finally holding 10 km) changes.
+// The sub-ranks III → II → I are mastery WITHIN the tier: they advance on XP
+// earned since entering the letter, so a hunter who will never run further
+// can still become the best version of what they currently are.
+//
+// Lifetime XP levels (src/logic/xp.ts) remain as the LEVEL readout and stat
+// pacing; they no longer define the letter.
 
 export const LETTERS = ['E', 'D', 'C', 'B', 'A', 'S'] as const;
 export type Letter = (typeof LETTERS)[number];
@@ -9,38 +13,62 @@ export type Letter = (typeof LETTERS)[number];
 export const SUB_RANKS = ['III', 'II', 'I'] as const;
 export type SubRank = (typeof SUB_RANKS)[number];
 
-export const LEVELS_PER_LETTER = 9;
+/**
+ * XP within the letter to advance III→II and II→I. Tunable design data.
+ * At a full daily clear (~80–100 XP) the first step lands in about a week
+ * and tier mastery in 2–6 weeks — matched to the consistency windows the
+ * Gates demand (21 days at E, 28 at D, …). Higher tiers sharpen slower.
+ */
+export const SUB_RANK_XP: ReadonlyArray<readonly [number, number]> = [
+  [600, 1000], // E
+  [800, 1400], // D
+  [1000, 1800], // C
+  [1200, 2200], // B
+  [1400, 2600], // A
+  [1600, 3000], // S — cosmetic; there is no further gate
+];
 
-/** First level of a letter band: E=1, D=10, C=19, B=28, A=37, S=46. */
-export function letterStartLevel(letterIndex: number): number {
-  return 1 + LEVELS_PER_LETTER * letterIndex;
+export interface SubProgress {
+  sub: SubRank;
+  /** XP into the current step and the step's size — null once the tier is mastered (I). */
+  into: number | null;
+  needed: number | null;
 }
 
-/** Which letter band a raw level falls in (uncapped by gates). */
-export function letterIndexForLevel(level: number): number {
-  return Math.min(Math.floor((level - 1) / LEVELS_PER_LETTER), LETTERS.length - 1);
+/** Where xpInLetter (lifetime XP minus the letter's entry mark) sits in the tier. */
+export function subProgress(letterIndex: number, xpInLetter: number): SubProgress {
+  const [toII, toI] = SUB_RANK_XP[Math.min(Math.max(letterIndex, 0), LETTERS.length - 1)];
+  const xp = Math.max(0, xpInLetter);
+  if (xp < toII) return { sub: 'III', into: xp, needed: toII };
+  if (xp < toII + toI) return { sub: 'II', into: xp - toII, needed: toI };
+  return { sub: 'I', into: null, needed: null };
 }
 
 export interface DisplayRank {
   letter: Letter;
   letterIndex: number;
   sub: SubRank;
-  /** True when XP has outgrown the letter — held at X-I until the Gate is passed. */
-  capped: boolean;
+  /** True at X-I: the tier is mastered — only the Gate moves the letter now. */
+  mastered: boolean;
 }
 
-export function displayRank(level: number, gatesPassed: number): DisplayRank {
-  const gates = Math.min(gatesPassed, LETTERS.length - 1);
-  const rawIndex = letterIndexForLevel(level);
-  if (rawIndex > gates) {
-    return { letter: LETTERS[gates], letterIndex: gates, sub: 'I', capped: true };
-  }
-  const levelInLetter = Math.max(0, level - letterStartLevel(rawIndex));
-  const sub = SUB_RANKS[Math.min(2, Math.floor(levelInLetter / 3))];
-  return { letter: LETTERS[rawIndex], letterIndex: rawIndex, sub, capped: false };
+export function displayRank(letterIndex: number, xpInLetter: number): DisplayRank {
+  const index = Math.min(Math.max(letterIndex, 0), LETTERS.length - 1);
+  const { sub } = subProgress(index, xpInLetter);
+  return { letter: LETTERS[index], letterIndex: index, sub, mastered: sub === 'I' };
 }
 
-/** Has the hunter levelled past the current letter's band (the Gate's level prerequisite)? */
-export function gateLevelReached(level: number, gatesPassed: number): boolean {
-  return letterIndexForLevel(level) > Math.min(gatesPassed, LETTERS.length - 1);
+/** The Gate's rank prerequisite: the current tier must be mastered first. */
+export function gateSubRankReached(letterIndex: number, xpInLetter: number): boolean {
+  return subProgress(letterIndex, xpInLetter).sub === 'I';
+}
+
+/**
+ * Cosmetic LEVEL seeding: placement seats the lifetime level at the letter's
+ * historical band start (E=1, D=10, C=19, B=28, A=37, S=46) so a B hunter
+ * doesn't read "LV 1". Kept for seeding and save migration only — bands no
+ * longer drive the letter.
+ */
+export function letterStartLevel(letterIndex: number): number {
+  return 1 + 9 * letterIndex;
 }

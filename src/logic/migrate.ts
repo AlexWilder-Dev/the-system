@@ -13,6 +13,7 @@ export function migrateV1(v1: AppStateV1): AppState {
     hunter: v1.hunter,
     xp: v1.xp,
     gatesPassed: 0,
+    letterXpStart: 0,
     profile: null,
     quests: v1.quests,
     results: v1.log.map((c) => ({

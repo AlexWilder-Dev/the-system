@@ -1,7 +1,6 @@
 import type { AppState, GateProgress, Sex } from '../types';
 import { GATES, type GateDef, type GateTest } from '../data/gates';
-import { levelForXp } from './xp';
-import { gateLevelReached, letterStartLevel, LETTERS, SUB_RANKS } from './rank';
+import { LETTERS, subProgress } from './rank';
 import {
   consistencyPercent,
   strengthWeeksSatisfied,
@@ -28,18 +27,18 @@ function fmtSec(sec: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-/** Tracked (non-test) requirements with live progress. Includes the level prerequisite. */
+/** Tracked (non-test) requirements with live progress. Includes the tier-mastery prerequisite. */
 export function trackedRequirements(state: AppState, today: string): ReqRow[] {
   const gate = nextGate(state.gatesPassed);
   if (!gate) return [];
-  const level = levelForXp(state.xp);
-  const capLevel = letterStartLevel(state.gatesPassed + 1);
+  const letter = LETTERS[state.gatesPassed];
+  const { sub } = subProgress(state.gatesPassed, state.xp - state.letterXpStart);
   const rows: ReqRow[] = [
     {
-      id: 'level',
-      label: `REACH ${LETTERS[state.gatesPassed]}-${SUB_RANKS[2]} CAP — LV ${capLevel}`,
-      current: `LV ${level}`,
-      met: gateLevelReached(level, state.gatesPassed),
+      id: 'subrank',
+      label: `MASTER THE TIER — REACH ${letter}-I`,
+      current: `${letter}-${sub}`,
+      met: sub === 'I',
       atGate: false,
     },
   ];
@@ -145,7 +144,7 @@ export function testRows(gate: GateDef, sex: Sex, gp: GateProgress): ReqRow[] {
   }));
 }
 
-/** The Gate materialises when every tracked requirement (incl. level cap) is met. */
+/** The Gate materialises when every tracked requirement (incl. tier mastery) is met. */
 export function gateAvailable(state: AppState, today: string): boolean {
   if (!state.profile || !nextGate(state.gatesPassed)) return false;
   return trackedRequirements(state, today).every((r) => r.met);

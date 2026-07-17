@@ -6,7 +6,7 @@ import { STAT_KEYS } from '../logic/stats';
 import type { Letter } from '../logic/rank';
 import { dramatic, fade, settle, sweep, useAnim } from '../motion/springs';
 
-/** Renders the front of the overlay queue: level-up, rank-up (gate pass), gate-fail, daily stamp. */
+/** Renders the front of the overlay queue: level-up, sub-rank, rank-up (gate pass), gate-fail, daily stamp. */
 export function OverlayHost() {
   const { overlay, dismissOverlay } = useGame();
   return (
@@ -18,6 +18,7 @@ export function OverlayHost() {
 
 function overlayKey(o: Overlay): string {
   if (o.kind === 'levelup') return `levelup-${o.level}`;
+  if (o.kind === 'subrank') return `subrank-${o.label}`;
   if (o.kind === 'rankup') return `rankup-${o.letter}`;
   return o.kind;
 }
@@ -25,7 +26,9 @@ function overlayKey(o: Overlay): string {
 function OverlayView({ overlay, onDismiss }: { overlay: Overlay; onDismiss: () => void }) {
   switch (overlay.kind) {
     case 'levelup':
-      return <LevelUp level={overlay.level} subLabel={overlay.subLabel} deltas={overlay.deltas} onDismiss={onDismiss} />;
+      return <LevelUp level={overlay.level} deltas={overlay.deltas} onDismiss={onDismiss} />;
+    case 'subrank':
+      return <SubRankUp label={overlay.label} mastered={overlay.mastered} onDismiss={onDismiss} />;
     case 'rankup':
       return <RankUp letter={overlay.letter} gateName={overlay.gateName} onDismiss={onDismiss} />;
     case 'gatefail':
@@ -37,12 +40,10 @@ function OverlayView({ overlay, onDismiss }: { overlay: Overlay; onDismiss: () =
 
 function LevelUp({
   level,
-  subLabel,
   deltas,
   onDismiss,
 }: {
   level: number;
-  subLabel: string | null;
   deltas: Partial<Record<StatKey, number>>;
   onDismiss: () => void;
 }) {
@@ -68,7 +69,6 @@ function LevelUp({
         <div className="overlay-eyebrow">SYSTEM</div>
         <h2 className="overlay-title">LEVEL UP</h2>
         <div className="overlay-level num">LV {level}</div>
-        {subLabel && <p className="overlay-copy">SUB-RANK {subLabel} ATTAINED.</p>}
         {rows.length > 0 && (
           <div className="delta-list">
             {rows.map((k) => (
@@ -79,6 +79,41 @@ function LevelUp({
             ))}
           </div>
         )}
+        <button className="sys-btn sys-btn--primary" onClick={onDismiss}>
+          CONTINUE
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/** Sub-rank attained: the tier sharpens. Mastery points the hunter at the Gate. */
+function SubRankUp({ label, mastered, onDismiss }: { label: string; mastered: boolean; onDismiss: () => void }) {
+  const tFade = useAnim(fade);
+  const tDramatic = useAnim(dramatic);
+  return (
+    <motion.div
+      className="overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={tFade}
+      onClick={onDismiss}
+    >
+      <motion.div
+        className="sys-panel overlay-panel"
+        initial={{ scale: 1.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={tDramatic}
+      >
+        <div className="overlay-eyebrow">SYSTEM</div>
+        <h2 className="overlay-title">SUB-RANK ATTAINED</h2>
+        <div className="overlay-level num">{label}</div>
+        <p className="overlay-copy">
+          {mastered
+            ? 'TIER MASTERED. YOU ARE THE BEST VERSION OF THIS RANK — ONLY THE GATE MOVES YOU NOW.'
+            : 'THE TIER SHARPENS. KEEP SHOWING UP.'}
+        </p>
         <button className="sys-btn sys-btn--primary" onClick={onDismiss}>
           CONTINUE
         </button>

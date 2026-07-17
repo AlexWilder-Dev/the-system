@@ -1,62 +1,61 @@
 import { describe, expect, it } from 'vitest';
-import { displayRank, gateLevelReached, letterIndexForLevel, letterStartLevel } from './rank';
+import { displayRank, gateSubRankReached, letterStartLevel, subProgress, SUB_RANK_XP } from './rank';
 
-describe('letter bands', () => {
-  it('starts letters at 1, 10, 19, 28, 37, 46', () => {
-    expect(letterStartLevel(0)).toBe(1);
-    expect(letterStartLevel(1)).toBe(10);
-    expect(letterStartLevel(2)).toBe(19);
-    expect(letterStartLevel(3)).toBe(28);
-    expect(letterStartLevel(4)).toBe(37);
-    expect(letterStartLevel(5)).toBe(46);
+describe('tier progression (XP within the letter)', () => {
+  it('walks III → II → I on the letter thresholds', () => {
+    // E: [600, 1000]
+    expect(subProgress(0, 0)).toMatchObject({ sub: 'III', into: 0, needed: 600 });
+    expect(subProgress(0, 599)).toMatchObject({ sub: 'III', into: 599 });
+    expect(subProgress(0, 600)).toMatchObject({ sub: 'II', into: 0, needed: 1000 });
+    expect(subProgress(0, 1599)).toMatchObject({ sub: 'II', into: 999 });
+    expect(subProgress(0, 1600)).toMatchObject({ sub: 'I', into: null, needed: null });
+    expect(subProgress(0, 99_999).sub).toBe('I');
   });
 
-  it('maps levels to letter bands, capped at S', () => {
-    expect(letterIndexForLevel(1)).toBe(0);
-    expect(letterIndexForLevel(9)).toBe(0);
-    expect(letterIndexForLevel(10)).toBe(1);
-    expect(letterIndexForLevel(18)).toBe(1);
-    expect(letterIndexForLevel(19)).toBe(2);
-    expect(letterIndexForLevel(46)).toBe(5);
-    expect(letterIndexForLevel(120)).toBe(5);
+  it('higher letters demand more XP per step', () => {
+    for (let i = 1; i < SUB_RANK_XP.length; i++) {
+      expect(SUB_RANK_XP[i][0]).toBeGreaterThan(SUB_RANK_XP[i - 1][0]);
+      expect(SUB_RANK_XP[i][1]).toBeGreaterThan(SUB_RANK_XP[i - 1][1]);
+    }
+  });
+
+  it('negative or pre-entry XP clamps to III', () => {
+    expect(subProgress(2, -50).sub).toBe('III');
   });
 });
 
 describe('displayRank', () => {
-  it('walks sub-ranks III → II → I inside a letter', () => {
-    expect(displayRank(1, 0)).toMatchObject({ letter: 'E', sub: 'III', capped: false });
-    expect(displayRank(3, 0)).toMatchObject({ letter: 'E', sub: 'III' });
-    expect(displayRank(4, 0)).toMatchObject({ letter: 'E', sub: 'II' });
-    expect(displayRank(7, 0)).toMatchObject({ letter: 'E', sub: 'I' });
-    expect(displayRank(9, 0)).toMatchObject({ letter: 'E', sub: 'I', capped: false });
+  it('the letter comes from gates passed, never from XP', () => {
+    expect(displayRank(0, 500_000)).toMatchObject({ letter: 'E', sub: 'I', mastered: true });
+    expect(displayRank(3, 0)).toMatchObject({ letter: 'B', sub: 'III', mastered: false });
   });
 
-  it('holds at X-I past the band until the Gate is passed', () => {
-    expect(displayRank(10, 0)).toMatchObject({ letter: 'E', sub: 'I', capped: true });
-    expect(displayRank(25, 0)).toMatchObject({ letter: 'E', sub: 'I', capped: true });
-    expect(displayRank(19, 1)).toMatchObject({ letter: 'D', sub: 'I', capped: true });
+  it('sub-rank reflects XP within the current letter', () => {
+    expect(displayRank(2, 0)).toMatchObject({ letter: 'C', sub: 'III' });
+    expect(displayRank(2, 1000)).toMatchObject({ letter: 'C', sub: 'II' });
+    expect(displayRank(2, 2800)).toMatchObject({ letter: 'C', sub: 'I', mastered: true });
   });
 
-  it('releases the next letter after a Gate pass', () => {
-    expect(displayRank(10, 1)).toMatchObject({ letter: 'D', sub: 'III', capped: false });
-    expect(displayRank(13, 1)).toMatchObject({ letter: 'D', sub: 'II' });
-    expect(displayRank(19, 2)).toMatchObject({ letter: 'C', sub: 'III' });
-    expect(displayRank(28, 3)).toMatchObject({ letter: 'B', sub: 'III' });
-    expect(displayRank(37, 4)).toMatchObject({ letter: 'A', sub: 'III' });
-  });
-
-  it('never caps at S — there is no further gate', () => {
-    expect(displayRank(46, 5)).toMatchObject({ letter: 'S', sub: 'III', capped: false });
-    expect(displayRank(55, 5)).toMatchObject({ letter: 'S', sub: 'I', capped: false });
-    expect(displayRank(200, 5)).toMatchObject({ letter: 'S', sub: 'I', capped: false });
+  it('clamps letter index into E…S', () => {
+    expect(displayRank(9, 0).letter).toBe('S');
+    expect(displayRank(-1, 0).letter).toBe('E');
   });
 });
 
-describe('gateLevelReached', () => {
-  it('requires levelling past the current band', () => {
-    expect(gateLevelReached(9, 0)).toBe(false);
-    expect(gateLevelReached(10, 0)).toBe(true);
-    expect(gateLevelReached(10, 1)).toBe(false);
-    expect(gateLevelReached(19, 1)).toBe(true);
+describe('gateSubRankReached', () => {
+  it('requires tier mastery (X-I) before a Gate can open', () => {
+    expect(gateSubRankReached(0, 1599)).toBe(false);
+    expect(gateSubRankReached(0, 1600)).toBe(true);
+    expect(gateSubRankReached(3, 3399)).toBe(false);
+    expect(gateSubRankReached(3, 3400)).toBe(true);
+  });
+});
+
+describe('letterStartLevel (cosmetic LEVEL seeding)', () => {
+  it('keeps the historical band starts', () => {
+    expect(letterStartLevel(0)).toBe(1);
+    expect(letterStartLevel(1)).toBe(10);
+    expect(letterStartLevel(3)).toBe(28);
+    expect(letterStartLevel(5)).toBe(46);
   });
 });

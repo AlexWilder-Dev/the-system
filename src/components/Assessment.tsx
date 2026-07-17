@@ -9,7 +9,18 @@ import { dramatic, settle, useAnim } from '../motion/springs';
 // The measurement: one question per screen, big tappable options, no typing
 // except the name. The System places the hunter; the user does not configure.
 
-type Step = 'accept' | 'name' | 'sex' | 'run' | 'pushups' | 'wake' | 'exercise' | 'waketime' | 'reveal';
+type Step =
+  | 'accept'
+  | 'name'
+  | 'sex'
+  | 'run'
+  | 'pushups'
+  | 'build'
+  | 'exercise'
+  | 'wake'
+  | 'routine'
+  | 'waketime'
+  | 'reveal';
 
 const WAKE_TIMES = ['05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00'];
 
@@ -24,10 +35,12 @@ export function Assessment() {
   const [visible, setVisible] = useState(false);
   const [name, setName] = useState(state?.hunter.name ?? '');
   const [sex, setSex] = useState<Sex>('M');
-  const [run, setRun] = useState<0 | 1 | 2 | 3>(0);
-  const [pushups, setPushups] = useState<0 | 1 | 2 | 3>(0);
-  const [wake, setWake] = useState<0 | 1 | 2>(0);
+  const [run, setRun] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [pushups, setPushups] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [build, setBuild] = useState<0 | 1 | 2 | 3>(0);
   const [exercise, setExercise] = useState<0 | 1 | 2 | 3>(0);
+  const [wake, setWake] = useState<0 | 1 | 2>(0);
+  const [routine, setRoutine] = useState<0 | 1 | 2>(0);
   const [wakeTime, setWakeTime] = useState('06:30');
 
   useEffect(() => {
@@ -35,8 +48,11 @@ export function Assessment() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const answers: AssessmentAnswers = { sex, run, pushups, wake, exercise, wakeTime };
-  const placement = useMemo(() => placeHunter(answers), [sex, run, pushups, wake, exercise, wakeTime]);
+  const answers: AssessmentAnswers = { sex, run, pushups, build, exercise, wake, routine, wakeTime };
+  const placement = useMemo(
+    () => placeHunter(answers),
+    [sex, run, pushups, build, exercise, wake, routine, wakeTime],
+  );
 
   const panel = (key: string, children: ReactNode) => (
     <motion.div
@@ -57,9 +73,11 @@ export function Assessment() {
     sex: migrated ? 'accept' : 'name',
     run: 'sex',
     pushups: 'run',
-    wake: 'pushups',
-    exercise: 'wake',
-    waketime: 'exercise',
+    build: 'pushups',
+    exercise: 'build',
+    wake: 'exercise',
+    routine: 'wake',
+    waketime: 'routine',
     reveal: 'waketime',
   };
 
@@ -141,7 +159,7 @@ export function Assessment() {
           )}
 
         {step === 'sex' &&
-          question('sex', '1 / 6', 'SEX — USED ONLY TO SELECT STANDARDS TABLES.', ['MALE', 'FEMALE'], (i) => {
+          question('sex', '1 / 8', 'SEX — USED ONLY TO SELECT STANDARDS TABLES.', ['MALE', 'FEMALE'], (i) => {
             setSex(i === 0 ? 'M' : 'F');
             setStep('run');
           })}
@@ -149,11 +167,11 @@ export function Assessment() {
         {step === 'run' &&
           question(
             'run',
-            '2 / 6',
-            'HOW FAR CAN YOU RUN WITHOUT STOPPING?',
-            ["CAN'T RUN 1 KM", '1–2 KM', 'CAN COMPLETE 5 KM', 'CAN COMPLETE 10 KM+'],
+            '2 / 8',
+            'HOW FAR CAN YOU RUN WITHOUT STOPPING — TODAY, NOT AT YOUR PEAK?',
+            ["CAN'T RUN 1 KM", '1–2 KM', '5 KM', '10 KM', '15 KM OR MORE'],
             (i) => {
-              setRun(i as 0 | 1 | 2 | 3);
+              setRun(i as 0 | 1 | 2 | 3 | 4);
               setStep('pushups');
             },
           )}
@@ -161,23 +179,23 @@ export function Assessment() {
         {step === 'pushups' &&
           question(
             'pushups',
-            '3 / 6',
+            '3 / 8',
             'MAXIMUM PUSH-UPS IN ONE SET, STRICT FORM?',
-            ['0–4', '5–14', '15–29', '30+'],
+            ['0–4', '5–14', '15–29', '30–49', '50+'],
             (i) => {
-              setPushups(i as 0 | 1 | 2 | 3);
-              setStep('wake');
+              setPushups(i as 0 | 1 | 2 | 3 | 4);
+              setStep('build');
             },
           )}
 
-        {step === 'wake' &&
+        {step === 'build' &&
           question(
-            'wake',
-            '4 / 6',
-            'DO YOU WAKE AT A CONSISTENT TIME?',
-            ['VARIES WILDLY', 'WITHIN ~1 HOUR', 'WITHIN 30 MIN'],
+            'build',
+            '4 / 8',
+            'BODY COMPOSITION — ANSWER HONESTLY. THE SCALE LIES TO THE MUSCULAR; A WAIST UNDER HALF YOUR HEIGHT IS THE BETTER MARKER.',
+            ['SIGNIFICANT EXCESS WEIGHT', 'CARRYING EXTRA', 'ABOUT AVERAGE', 'LEAN / ATHLETIC'],
             (i) => {
-              setWake(i as 0 | 1 | 2);
+              setBuild(i as 0 | 1 | 2 | 3);
               setStep('exercise');
             },
           )}
@@ -185,11 +203,35 @@ export function Assessment() {
         {step === 'exercise' &&
           question(
             'exercise',
-            '5 / 6',
+            '5 / 8',
             'DAYS PER WEEK YOU CURRENTLY EXERCISE?',
             ['0', '1–2', '3–4', '5+'],
             (i) => {
               setExercise(i as 0 | 1 | 2 | 3);
+              setStep('wake');
+            },
+          )}
+
+        {step === 'wake' &&
+          question(
+            'wake',
+            '6 / 8',
+            'DO YOU WAKE AT A CONSISTENT TIME?',
+            ['VARIES WILDLY', 'WITHIN ~1 HOUR', 'WITHIN 30 MIN'],
+            (i) => {
+              setWake(i as 0 | 1 | 2);
+              setStep('routine');
+            },
+          )}
+
+        {step === 'routine' &&
+          question(
+            'routine',
+            '7 / 8',
+            'DO YOUR MORNINGS FOLLOW A STRUCTURE?',
+            ['NO ROUTINE', 'LOOSELY', 'A SOLID ROUTINE'],
+            (i) => {
+              setRoutine(i as 0 | 1 | 2);
               setStep('waketime');
             },
           )}
@@ -198,7 +240,7 @@ export function Assessment() {
           panel(
             'waketime',
             <>
-              <div className="assess-progress">MEASUREMENT 6 / 6</div>
+              <div className="assess-progress">MEASUREMENT 8 / 8</div>
               <p className="overlay-copy">TARGET WAKE TIME. YOUR 30-MIN WINDOW STARTS HERE.</p>
               <div className="choice-grid">
                 {WAKE_TIMES.map((t) => (

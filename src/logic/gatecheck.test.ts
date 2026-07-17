@@ -14,7 +14,7 @@ import {
 const T = '2026-07-16';
 const d = (n: number) => addDays(T, -n);
 
-/** A hunter with `metDays` fully-logged days out of the trailing 21, at the given xp. */
+/** A hunter with `metDays` fully-logged days out of the trailing 21, at the given xp (tier entry at 0). */
 function makeState(opts: { xp: number; metDays: number; windowDays?: number }): AppState {
   const windowDays = opts.windowDays ?? 21;
   const quests = ['mp:sunlight', 'mp:wake', 'mp:hydrate', 'steps', 'rest'];
@@ -31,6 +31,7 @@ function makeState(opts: { xp: number; metDays: number; windowDays?: number }): 
     hunter: { name: 'Test', awakenedAt: '2026-06-01T00:00:00.000Z' },
     xp: opts.xp,
     gatesPassed: 0,
+    letterXpStart: 0,
     profile: { sex: 'M', wakeWindowStart: '06:30', track: 'builder5k', assessedAt: '2026-06-01T00:00:00.000Z' },
     quests: [],
     results,
@@ -46,17 +47,18 @@ function makeState(opts: { xp: number; metDays: number; windowDays?: number }): 
 }
 
 describe('gate availability (E→D scenario, AC5)', () => {
-  it('materialises when level cap + consistency + wake window are all met', () => {
-    // 17/21 days = 81% ≥ 75%; wake MET 17 ≥ 15; xp 2700 = level 10 > E band
+  it('materialises when tier mastery + consistency + wake window are all met', () => {
+    // 17/21 days = 81% ≥ 75%; wake MET 17 ≥ 15; 2700 XP in-letter ≥ 1600 → E-I
     const state = makeState({ xp: 2700, metDays: 17 });
     expect(gateAvailable(state, T)).toBe(true);
   });
 
-  it('stays sealed below the level cap', () => {
-    const state = makeState({ xp: 2600, metDays: 17 }); // level 9
+  it('stays sealed until the tier is mastered (E-I)', () => {
+    const state = makeState({ xp: 1000, metDays: 17 }); // E-II — 600 short of mastery
     expect(gateAvailable(state, T)).toBe(false);
     const rows = trackedRequirements(state, T);
-    expect(rows.find((r) => r.id === 'level')?.met).toBe(false);
+    expect(rows.find((r) => r.id === 'subrank')?.met).toBe(false);
+    expect(rows.find((r) => r.id === 'subrank')?.current).toBe('E-II');
   });
 
   it('stays sealed below the consistency bar, with live progress visible', () => {

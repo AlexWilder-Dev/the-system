@@ -8,6 +8,7 @@ const base: AppState = {
   hunter: { name: 'Test', awakenedAt: '2026-07-01T00:00:00.000Z' },
   xp: 120,
   gatesPassed: 0,
+  letterXpStart: 0,
   profile: { sex: 'M', wakeWindowStart: '06:30', track: 'foundation', assessedAt: '2026-07-01T00:00:00.000Z' },
   quests: [],
   results: [{ questId: 'mp:sunlight', date: '2026-07-15', status: 'MET', xpEarned: 10 }],
